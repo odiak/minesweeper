@@ -7,7 +7,7 @@ function initBoard(w, h) {
   let board = Range(0, w).map(x =>
     Range(0, h).map(y =>
       Map({
-        opened: true,
+        opened: false,
         hasMine: false,
         surroundingMines: 0,
         flagged: false,
@@ -38,26 +38,26 @@ function putMines(board, w, h, nMines, startX, startY) {
     throw new Error("nMines is too big: " + nMines);
   }
 
-  return Range()
-    .map(() => [
-      Math.floor(Math.random() * w),
-      Math.floor(Math.random() * h),
-    ])
-    .filter(([x, y]) => x !== startX && y != startY && !board.getIn([x, y, 'hasMine']))
-    .take(nMines)
-    .reduce((board, [x, y]) => {
-      let board_ = board.updateIn([x, y, 'hasMine'], () => true)
-      return surrounding
+  for (let n = 0; n < nMines; ) {
+    let x = Math.floor(Math.random() * w);
+    let y = Math.floor(Math.random() * h);
+    if (x !== startX && y !== startY && !board.getIn([x, y, 'hasMine'])) {
+      n++;
+      board = board.updateIn([x, y, 'hasMine'], () => true);
+      surrounding
         .map(([p, q]) => [x + p, y + q])
         .filter(_isInside(w, h))
-        .reduce((board, [x, y]) =>
-          board.updateIn([x, y, 'surroundingMines'], c => c + 1),
-          board_
-        );
-    }, board);
+        .filter(([x, y]) => !board.getIn([x, y, 'hasMine']))
+        .forEach(([x, y]) => {
+          board = board.updateIn([x, y, 'surroundingMines'], c => c + 1);
+        });
+    }
+  }
+
+  return board;
 }
 
-function open(board, x, y) {
+function open(board, w, h, x, y) {
   let board_ = board.updateIn([x, y, 'opened'], () => true);
 
   if (board_.getIn([x, y, 'hasMine']) ||
@@ -65,7 +65,11 @@ function open(board, x, y) {
     return board_;
   }
 
-  return board_;
+  return surrounding
+    .map(([a, b]) => [x + a, y + b])
+    .filter(_isInside(w, h))
+    .filter(([x_, y_]) => !board.getIn([x_, y_, 'hasMine']) && !board.getIn([x_, y_, 'opened']))
+    .reduce((board, [x_, y_]) => open(board, w, h, x_, y_), board_);
 }
 
 class App extends React.Component {
@@ -104,10 +108,10 @@ class App extends React.Component {
     this.setState((prev, props) => {
       let board = prev.board;
       if (!prev.started) {
-        board = putMines(board, prev.width, prev.height, 10, x, y);
+        board = putMines(board, prev.width, prev.height, 14, x, y);
       }
       return {
-        board: open(board, x, y),
+        board: open(board, this.state.width, this.state.height, x, y),
         started: true,
       };
     });
@@ -120,7 +124,7 @@ function Cell(props) {
   if (props.hasMine) classNames.push('has-mine');
   if (props.flagged) classNames.push('flagged');
   let text = '';
-  if (props.opened && props.surroundingMines > 0) {
+  if (props.opened && !props.hasMine && props.surroundingMines > 0) {
     text = props.surroundingMines;
   }
   return <div className={'Cell ' + classNames.join(' ')}
