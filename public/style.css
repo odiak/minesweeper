@@ -21,6 +21,10 @@
   background: #dddddd;
 }
 
+.Cell.flagged {
+  background: #9999ff;
+}
+
 .board.game-over .Cell.has-mine {
   background: #000000;
 }

@@ -93,6 +93,12 @@ function openedAll(board) {
     );
 }
 
+function toggleFlagged(board, x, y) {
+  if (board.getIn([x, y, 'opened'])) return board;
+
+  return board.updateIn([x, y, 'flagged'], (f) => !f);
+}
+
 class App extends React.Component {
   constructor() {
     super();
@@ -114,18 +120,22 @@ class App extends React.Component {
       let cols = [];
       for (let x = 0; x < width; x++) {
         let props = this.state.board.getIn([x, y]).toJS();
-        let onClick = (event) => { this.handleClick(x, y) };
-        cols.push(<td key={x}><Cell {...props} onClick={onClick}/></td>);
+        let onClick = (event) => { this.handleClick(event, x, y) };
+        let onContextMenu = (event) => { this.handleContextMenu(event, x, y) };
+        cols.push(<td key={x}><Cell {...props}
+            onClick={onClick}
+            onContextMenu={onContextMenu}/></td>);
       }
       rows.push(<tr key={y}>{cols}</tr>);
     }
     let gameOverClass = this.state.gameOver ? 'game-over' : '';
     return (<div>
+      <button onClick={(e) => this.restart(e)}>restart</button>
       <table className={'board ' + gameOverClass}><tbody>{rows}</tbody></table>
     </div>);
   }
 
-  handleClick(x, y) {
+  handleClick(event, x, y) {
     if (this.state.gameOver) return;
     if (this.state.board.getIn([x, y, 'flagged'])) return;
 
@@ -148,6 +158,23 @@ class App extends React.Component {
       }
     });
   }
+
+  handleContextMenu(event, x, y) {
+    event.preventDefault();
+    if (!this.state.started || this.state.gameOver) return;
+
+    this.setState((prev, props) => ({
+      board: toggleFlagged(this.state.board, x, y),
+    }));
+  }
+
+  restart(event) {
+    this.setState((prev, props) => ({
+      gameOver: false,
+      started: false,
+      board: initBoard(prev.board.get('width'), prev.board.get('height')),
+    }));
+  }
 }
 
 function Cell(props) {
@@ -160,7 +187,8 @@ function Cell(props) {
     text = props.surroundingMines;
   }
   return <div className={'Cell ' + classNames.join(' ')}
-      onClick={props.onClick}>{text}</div>;
+      onClick={props.onClick}
+      onContextMenu={props.onContextMenu}>{text}</div>;
 }
 
 ReactDOM.render(
