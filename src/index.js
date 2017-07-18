@@ -12,8 +12,8 @@ function initBoard(w, h) {
         surroundingMines: 0,
         flagged: false,
       })
-    ).toList()
-  ).toList();
+    ).toMap()
+  ).toMap();
 
   return board;
 }
@@ -38,23 +38,25 @@ function putMines(board, w, h, nMines, startX, startY) {
     throw new Error("nMines is too big: " + nMines);
   }
 
-  for (let n = 0; n < nMines; ) {
-    let x = Math.floor(Math.random() * w);
-    let y = Math.floor(Math.random() * h);
-    if (x !== startX && y !== startY && !board.getIn([x, y, 'hasMine'])) {
-      n++;
-      board = board.updateIn([x, y, 'hasMine'], () => true);
+  if (nMines === 0) return board;
+
+  let x = Math.floor(Math.random() * w);
+  let y = Math.floor(Math.random() * h);
+  if (x !== startX && y !== startY && !board.getIn([x, y, 'hasMine'])) {
+    let board_ = board.updateIn([x, y, 'hasMine'], () => true);
+    return putMines(
       surrounding
         .map(([p, q]) => [x + p, y + q])
         .filter(_isInside(w, h))
-        .filter(([x, y]) => !board.getIn([x, y, 'hasMine']))
-        .forEach(([x, y]) => {
-          board = board.updateIn([x, y, 'surroundingMines'], c => c + 1);
-        });
-    }
+        .filter(([x, y]) => !board_.getIn([x, y, 'hasMine']))
+        .reduce((board, [x, y]) =>
+          board.updateIn([x, y, 'surroundingMines'], c => c + 1),
+          board_
+        ),
+      w, h, nMines - 1, startX, startY);
   }
 
-  return board;
+  return putMines(board, w, h, nMines, startX, startY);
 }
 
 function open(board, w, h, x, y) {
