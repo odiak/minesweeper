@@ -83,6 +83,16 @@ function open(board, x, y) {
     .reduce((board, [x_, y_]) => open(board, x_, y_), board_);
 }
 
+function openedAll(board) {
+  return Range(0, board.get('width'))
+    .every(x =>
+      Range(0, board.get('height'))
+        .every(y =>
+          board.getIn([x, y, 'hasMine']) || board.getIn([x, y, 'opened'])
+        )
+    );
+}
+
 class App extends React.Component {
   constructor() {
     super();
@@ -92,6 +102,7 @@ class App extends React.Component {
     this.state = {
       board: initBoard(width, height),
       started: false,
+      gameOver: false,
     };
   }
 
@@ -108,12 +119,14 @@ class App extends React.Component {
       }
       rows.push(<tr key={y}>{cols}</tr>);
     }
+    let gameOverClass = this.state.gameOver ? 'game-over' : '';
     return (<div>
-      <table className="board"><tbody>{rows}</tbody></table>
+      <table className={'board ' + gameOverClass}><tbody>{rows}</tbody></table>
     </div>);
   }
 
   handleClick(x, y) {
+    if (this.state.gameOver) return;
     if (this.state.board.getIn([x, y, 'flagged'])) return;
 
     this.setState((prev, props) => {
@@ -125,6 +138,14 @@ class App extends React.Component {
         board: open(board, x, y),
         started: true,
       };
+    });
+
+    this.setState((prev, props) => {
+      if (prev.board.getIn([x, y, 'hasMine']) || openedAll(prev.board)) {
+        return {
+          gameOver: true,
+        };
+      }
     });
   }
 }

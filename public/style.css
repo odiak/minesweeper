@@ -21,6 +21,10 @@
   background: #dddddd;
 }
 
-.Cell.opened.has-mine {
+.board.game-over .Cell.has-mine {
+  background: #000000;
+}
+
+.board.game-over .Cell.opened.has-mine {
   background: #ff0000;
 }
