@@ -22,11 +22,19 @@
 }
 
 .Cell.flagged {
-  background: #9999ff;
+  background: royalblue;
 }
 
 .board.game-over .Cell.has-mine {
   background: #000000;
+}
+
+.board.game-over .Cell.flagged {
+  background: orange;
+}
+
+.board.game-over .Cell.flagged.has-mine {
+  background: green;
 }
 
 .board.game-over .Cell.opened.has-mine {
