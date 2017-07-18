@@ -40,7 +40,7 @@ function _isInside(w, h) {
 function putMines(board, nMines, startX, startY) {
   let w = board.get('width');
   let h = board.get('height');
-  if (nMines > w * h) {
+  if (nMines > w * h - 9) {
     throw new Error("nMines is too big: " + nMines);
   }
 
@@ -48,7 +48,10 @@ function putMines(board, nMines, startX, startY) {
 
   let x = Math.floor(Math.random() * w);
   let y = Math.floor(Math.random() * h);
-  if (x !== startX && y !== startY && !board.getIn([x, y, 'hasMine'])) {
+  let forbiddenPoints = List.of(List.of(startX, startY)).concat(
+    surrounding.map(([p, q]) => List.of(startX + p, startY + q)));
+
+  if (!forbiddenPoints.includes(List.of(x, y)) && !board.getIn([x, y, 'hasMine'])) {
     return letval(board.updateIn([x, y, 'hasMine'], () => true), board_ =>
       putMines(
         surrounding
@@ -142,7 +145,7 @@ class App extends React.Component {
     this.setState((prev, props) => {
       let board = prev.board;
       if (!prev.started) {
-        board = putMines(board, 14, x, y);
+        board = putMines(board, 20, x, y);
       }
       return {
         board: open(board, x, y),
