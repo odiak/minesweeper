@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom';
 
 import {List, Map, Range} from 'immutable';
 
+function letval(value, f) {
+  return f(value);
+}
+
 function initBoard(w, h) {
   let board = Range(0, w).map(x =>
     Range(0, h).map(y =>
@@ -15,7 +19,7 @@ function initBoard(w, h) {
     ).toMap()
   ).toMap();
 
-  return board;
+  return board.merge({width: w, height: h});
 }
 
 const surrounding = List([
@@ -33,7 +37,9 @@ function _isInside(w, h) {
   return ([x, y]) => x >= 0 && x < w && y >= 0 && y < h;
 }
 
-function putMines(board, w, h, nMines, startX, startY) {
+function putMines(board, nMines, startX, startY) {
+  let w = board.get('width');
+  let h = board.get('height');
   if (nMines > w * h) {
     throw new Error("nMines is too big: " + nMines);
   }
@@ -43,23 +49,26 @@ function putMines(board, w, h, nMines, startX, startY) {
   let x = Math.floor(Math.random() * w);
   let y = Math.floor(Math.random() * h);
   if (x !== startX && y !== startY && !board.getIn([x, y, 'hasMine'])) {
-    let board_ = board.updateIn([x, y, 'hasMine'], () => true);
-    return putMines(
-      surrounding
-        .map(([p, q]) => [x + p, y + q])
-        .filter(_isInside(w, h))
-        .filter(([x, y]) => !board_.getIn([x, y, 'hasMine']))
-        .reduce((board, [x, y]) =>
-          board.updateIn([x, y, 'surroundingMines'], c => c + 1),
-          board_
-        ),
-      w, h, nMines - 1, startX, startY);
+    return letval(board.updateIn([x, y, 'hasMine'], () => true), board_ =>
+      putMines(
+        surrounding
+          .map(([p, q]) => [x + p, y + q])
+          .filter(_isInside(w, h))
+          .filter(([x, y]) => !board_.getIn([x, y, 'hasMine']))
+          .reduce((board, [x, y]) =>
+            board.updateIn([x, y, 'surroundingMines'], c => c + 1),
+            board_
+          ),
+        nMines - 1, startX, startY)
+    );
   }
 
-  return putMines(board, w, h, nMines, startX, startY);
+  return putMines(board, nMines, startX, startY);
 }
 
-function open(board, w, h, x, y) {
+function open(board, x, y) {
+  let w = board.get('width');
+  let h = board.get('height');
   let board_ = board.updateIn([x, y, 'opened'], () => true);
 
   if (board_.getIn([x, y, 'hasMine']) ||
@@ -71,7 +80,7 @@ function open(board, w, h, x, y) {
     .map(([a, b]) => [x + a, y + b])
     .filter(_isInside(w, h))
     .filter(([x_, y_]) => !board.getIn([x_, y_, 'hasMine']) && !board.getIn([x_, y_, 'opened']))
-    .reduce((board, [x_, y_]) => open(board, w, h, x_, y_), board_);
+    .reduce((board, [x_, y_]) => open(board, x_, y_), board_);
 }
 
 class App extends React.Component {
@@ -81,8 +90,6 @@ class App extends React.Component {
     let width = 12;
     let height = 12;
     this.state = {
-      width,
-      height,
       board: initBoard(width, height),
       started: false,
     };
@@ -90,9 +97,11 @@ class App extends React.Component {
 
   render() {
     let rows = [];
-    for (let y = 0; y < this.state.height; y++) {
+    let width = this.state.board.get('width');
+    let height = this.state.board.get('height');
+    for (let y = 0; y < height; y++) {
       let cols = [];
-      for (let x = 0; x < this.state.width; x++) {
+      for (let x = 0; x < width; x++) {
         let props = this.state.board.getIn([x, y]).toJS();
         let onClick = (event) => { this.handleClick(x, y) };
         cols.push(<td key={x}><Cell {...props} onClick={onClick}/></td>);
@@ -110,10 +119,10 @@ class App extends React.Component {
     this.setState((prev, props) => {
       let board = prev.board;
       if (!prev.started) {
-        board = putMines(board, prev.width, prev.height, 14, x, y);
+        board = putMines(board, 14, x, y);
       }
       return {
-        board: open(board, this.state.width, this.state.height, x, y),
+        board: open(board, x, y),
         started: true,
       };
     });
