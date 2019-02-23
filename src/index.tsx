@@ -2,116 +2,160 @@ import {useState} from 'react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
-import {List, Map, Range} from 'immutable';
-
-function letval(value, f) {
-  return f(value);
+function* range(start: number, end: number): Iterable<number> {
+  for (let n = start; n < end; n++) {
+    yield n;
+  }
 }
 
-function initBoard(w, h) {
-  let board = Range(0, w)
-    .map((x) =>
-      Range(0, h)
-        .map((y) =>
-          Map({
-            opened: false,
-            hasMine: false,
-            surroundingMines: 0,
-            flagged: false,
-          }),
-        )
-        .toMap(),
-    )
-    .toMap();
-
-  return board.merge({width: w, height: h});
+function assignArray<Elem, Arr extends Array<Elem> | ReadonlyArray<Elem>>(
+  array: Arr,
+  index: number,
+  value: Elem,
+): Arr {
+  const newArray = array.slice();
+  newArray[index] = value;
+  return newArray as Arr;
 }
 
-const surrounding = List([
-  List([-1, -1]),
-  List([-1, 0]),
-  List([-1, 1]),
-  List([0, -1]),
-  List([0, 1]),
-  List([1, -1]),
-  List([1, 0]),
-  List([1, 1]),
-]);
-
-function _isInside(w, h) {
-  return ([x, y]) => x >= 0 && x < w && y >= 0 && y < h;
+interface Cell {
+  readonly isOpened: boolean;
+  readonly hasMine: boolean;
+  readonly surroundingMines: number;
+  readonly isFlagged: boolean;
 }
 
-function putMines(board, nMines, startX, startY) {
-  let w = board.get('width');
-  let h = board.get('height');
-  if (nMines > w * h - 9) {
-    throw new Error('nMines is too big: ' + nMines);
+interface Board {
+  readonly width: number;
+  readonly height: number;
+  readonly cells: ReadonlyArray<Cell>;
+}
+
+function initBoard(width: number, height: number): Board {
+  return {
+    width,
+    height,
+    cells: new Array<Cell>(width * height).fill({
+      isOpened: false,
+      hasMine: false,
+      surroundingMines: 0,
+      isFlagged: false,
+    }),
+  };
+}
+
+const surrounding: ReadonlyArray<[number, number]> = [
+  [-1, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, -1],
+  [0, 1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+];
+
+function indexToCoodinate(i: number, width: number): [number, number] {
+  const x = i % width;
+  const y = (i - x) / width;
+  return [x, y];
+}
+
+function coordinateToIndex(x: number, y: number, width: number): number {
+  return x + y * width;
+}
+
+function assignCell(board: Board, i: number, partialCell: Partial<Cell>): Board {
+  const cell = board.cells[i];
+  return {...board, cells: assignArray(board.cells, i, {...cell, ...partialCell})};
+}
+
+function isInsideBoard(x: number, y: number, width: number, height: number): boolean {
+  return x >= 0 && x < width && y >= 0 && y < height;
+}
+
+function putMinesRandomly(board: Board, nMines: number, startX: number, startY: number): Board {
+  if (nMines <= 0) return board;
+
+  const {width, height, cells} = board;
+
+  const candidates = [...cells.entries()].filter(([i, cell]) => {
+    if (cell.isOpened || cell.hasMine) return false;
+
+    const [x, y] = indexToCoodinate(i, width);
+
+    return Math.abs(x - startX) > 1 || Math.abs(y - startY) > 1;
+  });
+
+  if (candidates.length === 0) {
+    return board;
   }
 
-  if (nMines === 0) return board;
+  const n = Math.min(nMines, candidates.length);
+  const targetIndices: number[] = [];
 
-  let x = Math.floor(Math.random() * w);
-  let y = Math.floor(Math.random() * h);
-  let forbiddenPoints = List.of(List.of(startX, startY)).concat(
-    surrounding.map((l) => l.toArray()).map(([p, q]) => List.of(startX + p, startY + q)),
-  );
-
-  if (!forbiddenPoints.includes(List.of(x, y)) && !board.getIn([x, y, 'hasMine'])) {
-    return letval(board.updateIn([x, y, 'hasMine'], () => true), (board_) =>
-      putMines(
-        surrounding
-          .map((l) => l.toArray())
-          .map(([p, q]) => [x + p, y + q])
-          .filter(_isInside(w, h))
-          .filter(([x, y]) => !board_.getIn([x, y, 'hasMine']))
-          .reduce(
-            (board, [x, y]) => board.updateIn([x, y, 'surroundingMines'], (c) => c + 1),
-            board_,
-          ),
-        nMines - 1,
-        startX,
-        startY,
-      ),
-    );
+  while (targetIndices.length < n) {
+    const [i] = candidates[Math.floor(Math.random() * candidates.length)];
+    if (!targetIndices.includes(i)) {
+      targetIndices.push(i);
+    }
   }
 
-  return putMines(board, nMines, startX, startY);
+  const newCells = targetIndices.reduce((cells, targetIndex) => {
+    const [targetX, targetY] = indexToCoodinate(targetIndex, width);
+    return cells.map((cell, i) => {
+      if (i === targetIndex) {
+        return {...cell, hasMine: true};
+      }
+
+      const [x, y] = indexToCoodinate(i, width);
+      if (Math.abs(x - targetX) <= 1 && Math.abs(y - targetY) <= 1) {
+        return {...cell, surroundingMines: cell.surroundingMines + 1};
+      }
+
+      return cell;
+    });
+  }, cells);
+
+  return {...board, cells: newCells};
 }
 
-function open(board, x, y) {
-  let w = board.get('width');
-  let h = board.get('height');
-  let board_ = board.updateIn([x, y, 'opened'], () => true);
+function open(board: Board, x: number, y: number): Board {
+  const {width, height} = board;
 
-  if (board_.getIn([x, y, 'hasMine']) || board_.getIn([x, y, 'surroundingMines']) > 0) {
-    return board_;
+  const i = coordinateToIndex(x, y, width);
+  const openedBoard = assignCell(board, i, {isOpened: true});
+  const cell = openedBoard.cells[i];
+
+  if (cell.hasMine || cell.surroundingMines > 0) {
+    return openedBoard;
   }
 
   return surrounding
-    .map((l) => l.toArray())
-    .map(([a, b]) => [x + a, y + b])
-    .filter(_isInside(w, h))
-    .filter(([x_, y_]) => !board.getIn([x_, y_, 'hasMine']) && !board.getIn([x_, y_, 'opened']))
-    .reduce((board, [x_, y_]) => open(board, x_, y_), board_);
+    .map(([dx, dy]) => [x + dx, y + dy])
+    .filter(([x, y]) => isInsideBoard(x, y, width, height))
+    .filter(([x, y]) => {
+      const {hasMine, isOpened} = openedBoard.cells[coordinateToIndex(x, y, width)];
+      return !hasMine && !isOpened;
+    })
+    .reduce((board, [x, y]) => open(board, x, y), openedBoard);
 }
 
-function openedAll(board) {
-  return Range(0, board.get('width')).every((x) =>
-    Range(0, board.get('height')).every(
-      (y) => board.getIn([x, y, 'hasMine']) || board.getIn([x, y, 'opened']),
-    ),
-  );
+function isOpenedAll(board: Board): boolean {
+  return board.cells.every(({hasMine, isOpened}) => hasMine || isOpened);
 }
 
-function toggleFlagged(board, x, y) {
-  if (board.getIn([x, y, 'opened'])) return board;
+function toggleFlagged(board: Board, x: number, y: number): Board {
+  const i = coordinateToIndex(x, y, board.width);
+  const cell = board.cells[i];
 
-  return board.updateIn([x, y, 'flagged'], (f) => !f);
+  if (cell.isOpened) return board;
+
+  return {...board, cells: assignArray(board.cells, i, {...cell, isFlagged: !cell.isFlagged})};
 }
 
 interface GameState {
-  board: Map<any, any>;
+  board: Board;
   isStarted: boolean;
   isGameOver: boolean;
 }
@@ -125,15 +169,15 @@ const App = ({}) => {
     isGameOver: false,
   }));
 
-  let rows = [];
-  for (let y = 0; y < height; y++) {
-    let cols = [];
-    for (let x = 0; x < width; x++) {
-      let props = state.board.getIn([x, y]).toJS();
-      let onClick = () => {
+  const rows = [];
+  for (const y of range(0, height)) {
+    const cols = [];
+    for (const x of range(0, width)) {
+      const props = state.board.cells[coordinateToIndex(x, y, width)];
+      const onClick = () => {
         setState(handleClick(x, y, state));
       };
-      let onContextMenu = (event: React.MouseEvent) => {
+      const onContextMenu = (event: React.MouseEvent) => {
         event.preventDefault();
         setState(handleContextMenu(x, y, state));
       };
@@ -145,7 +189,7 @@ const App = ({}) => {
     }
     rows.push(<tr key={y}>{cols}</tr>);
   }
-  let gameOverClass = state.isGameOver ? 'game-over' : '';
+  const gameOverClass = state.isGameOver ? 'game-over' : '';
   return (
     <div>
       <button
@@ -162,17 +206,20 @@ const App = ({}) => {
   );
 };
 
-function handleClick(x: number, y: number, {board, isStarted, isGameOver}: GameState): GameState {
-  if (isGameOver) return;
-  if (board.getIn([x, y, 'flagged'])) return;
+function handleClick(x: number, y: number, state: GameState): GameState {
+  let {board, isStarted, isGameOver} = state;
+
+  if (isGameOver) return state;
+  const i = coordinateToIndex(x, y, board.width);
+  if (board.cells[i].isFlagged) return state;
 
   if (!isStarted) {
-    board = putMines(board, 20, x, y);
+    board = putMinesRandomly(board, 20, x, y);
     isStarted = true;
   }
   board = open(board, x, y);
 
-  if (board.getIn([x, y, 'hasMine']) || openedAll(board)) {
+  if (board.cells[i].hasMine || isOpenedAll(board)) {
     isGameOver = true;
   }
 
@@ -192,9 +239,9 @@ function handleContextMenu(
 }
 
 interface CellProps {
-  opened: boolean;
+  isOpened: boolean;
   hasMine: boolean;
-  flagged: boolean;
+  isFlagged: boolean;
   surroundingMines: number;
   onClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -202,11 +249,11 @@ interface CellProps {
 
 function Cell(props: CellProps) {
   let classNames = [];
-  if (props.opened) classNames.push('opened');
+  if (props.isOpened) classNames.push('opened');
   if (props.hasMine) classNames.push('has-mine');
-  if (props.flagged) classNames.push('flagged');
+  if (props.isFlagged) classNames.push('flagged');
   let text = '';
-  if (props.opened && !props.hasMine && props.surroundingMines > 0) {
+  if (props.isOpened && !props.hasMine && props.surroundingMines > 0) {
     text = props.surroundingMines.toString();
   }
   return (
