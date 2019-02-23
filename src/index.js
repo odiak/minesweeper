@@ -8,16 +8,20 @@ function letval(value, f) {
 }
 
 function initBoard(w, h) {
-  let board = Range(0, w).map(x =>
-    Range(0, h).map(y =>
-      Map({
-        opened: false,
-        hasMine: false,
-        surroundingMines: 0,
-        flagged: false,
-      })
-    ).toMap()
-  ).toMap();
+  let board = Range(0, w)
+    .map((x) =>
+      Range(0, h)
+        .map((y) =>
+          Map({
+            opened: false,
+            hasMine: false,
+            surroundingMines: 0,
+            flagged: false,
+          }),
+        )
+        .toMap(),
+    )
+    .toMap();
 
   return board.merge({width: w, height: h});
 }
@@ -41,7 +45,7 @@ function putMines(board, nMines, startX, startY) {
   let w = board.get('width');
   let h = board.get('height');
   if (nMines > w * h - 9) {
-    throw new Error("nMines is too big: " + nMines);
+    throw new Error('nMines is too big: ' + nMines);
   }
 
   if (nMines === 0) return board;
@@ -49,20 +53,24 @@ function putMines(board, nMines, startX, startY) {
   let x = Math.floor(Math.random() * w);
   let y = Math.floor(Math.random() * h);
   let forbiddenPoints = List.of(List.of(startX, startY)).concat(
-    surrounding.map(([p, q]) => List.of(startX + p, startY + q)));
+    surrounding.map(([p, q]) => List.of(startX + p, startY + q)),
+  );
 
   if (!forbiddenPoints.includes(List.of(x, y)) && !board.getIn([x, y, 'hasMine'])) {
-    return letval(board.updateIn([x, y, 'hasMine'], () => true), board_ =>
+    return letval(board.updateIn([x, y, 'hasMine'], () => true), (board_) =>
       putMines(
         surrounding
           .map(([p, q]) => [x + p, y + q])
           .filter(_isInside(w, h))
           .filter(([x, y]) => !board_.getIn([x, y, 'hasMine']))
-          .reduce((board, [x, y]) =>
-            board.updateIn([x, y, 'surroundingMines'], c => c + 1),
-            board_
+          .reduce(
+            (board, [x, y]) => board.updateIn([x, y, 'surroundingMines'], (c) => c + 1),
+            board_,
           ),
-        nMines - 1, startX, startY)
+        nMines - 1,
+        startX,
+        startY,
+      ),
     );
   }
 
@@ -74,8 +82,7 @@ function open(board, x, y) {
   let h = board.get('height');
   let board_ = board.updateIn([x, y, 'opened'], () => true);
 
-  if (board_.getIn([x, y, 'hasMine']) ||
-      board_.getIn([x, y, 'surroundingMines']) > 0) {
+  if (board_.getIn([x, y, 'hasMine']) || board_.getIn([x, y, 'surroundingMines']) > 0) {
     return board_;
   }
 
@@ -87,13 +94,11 @@ function open(board, x, y) {
 }
 
 function openedAll(board) {
-  return Range(0, board.get('width'))
-    .every(x =>
-      Range(0, board.get('height'))
-        .every(y =>
-          board.getIn([x, y, 'hasMine']) || board.getIn([x, y, 'opened'])
-        )
-    );
+  return Range(0, board.get('width')).every((x) =>
+    Range(0, board.get('height')).every(
+      (y) => board.getIn([x, y, 'hasMine']) || board.getIn([x, y, 'opened']),
+    ),
+  );
 }
 
 function toggleFlagged(board, x, y) {
@@ -123,19 +128,29 @@ class App extends React.Component {
       let cols = [];
       for (let x = 0; x < width; x++) {
         let props = this.state.board.getIn([x, y]).toJS();
-        let onClick = (event) => { this.handleClick(event, x, y) };
-        let onContextMenu = (event) => { this.handleContextMenu(event, x, y) };
-        cols.push(<td key={x}><Cell {...props}
-            onClick={onClick}
-            onContextMenu={onContextMenu}/></td>);
+        let onClick = (event) => {
+          this.handleClick(event, x, y);
+        };
+        let onContextMenu = (event) => {
+          this.handleContextMenu(event, x, y);
+        };
+        cols.push(
+          <td key={x}>
+            <Cell {...props} onClick={onClick} onContextMenu={onContextMenu} />
+          </td>,
+        );
       }
       rows.push(<tr key={y}>{cols}</tr>);
     }
     let gameOverClass = this.state.gameOver ? 'game-over' : '';
-    return (<div>
-      <button onClick={(e) => this.restart(e)}>restart</button>
-      <table className={'board ' + gameOverClass}><tbody>{rows}</tbody></table>
-    </div>);
+    return (
+      <div>
+        <button onClick={(e) => this.restart(e)}>restart</button>
+        <table className={'board ' + gameOverClass}>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+    );
   }
 
   handleClick(event, x, y) {
@@ -189,12 +204,15 @@ function Cell(props) {
   if (props.opened && !props.hasMine && props.surroundingMines > 0) {
     text = props.surroundingMines;
   }
-  return <div className={'Cell ' + classNames.join(' ')}
+  return (
+    <div
+      className={'Cell ' + classNames.join(' ')}
       onClick={props.onClick}
-      onContextMenu={props.onContextMenu}>{text}</div>;
+      onContextMenu={props.onContextMenu}
+    >
+      {text}
+    </div>
+  );
 }
 
-ReactDOM.render(
-  <App/>,
-  document.getElementById('app')
-)
+ReactDOM.render(<App />, document.getElementById('app'));

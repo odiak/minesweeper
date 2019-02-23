@@ -4,7 +4,7 @@ module.exports = {
   entry: './src/index.js',
   output: {
     filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist')
+    path: path.resolve(__dirname, 'dist'),
   },
   module: {
     rules: [
@@ -15,9 +15,9 @@ module.exports = {
           loader: 'babel-loader',
           options: {
             presets: ['latest', 'react'],
-          }
-        }
-      }
+          },
+        },
+      },
     ],
   },
   devServer: {
