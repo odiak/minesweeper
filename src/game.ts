@@ -14,9 +14,9 @@ export interface Board {
 }
 
 export interface GameState {
-  board: Board;
-  isStarted: boolean;
-  isGameOver: boolean;
+  readonly board: Board;
+  readonly isStarted: boolean;
+  readonly isGameOver: boolean;
 }
 
 export function initBoard(width: number, height: number): Board {
