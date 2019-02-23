@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
@@ -109,92 +110,85 @@ function toggleFlagged(board, x, y) {
   return board.updateIn([x, y, 'flagged'], (f) => !f);
 }
 
-class App extends React.Component<{}, any> {
-  constructor(props: {}) {
-    super(props);
+interface GameState {
+  board: Map<any, any>;
+  isStarted: boolean;
+  isGameOver: boolean;
+}
+const width = 12;
+const height = 12;
 
-    let width = 12;
-    let height = 12;
-    this.state = {
-      board: initBoard(width, height),
-      started: false,
-      gameOver: false,
-    };
-  }
+const App = ({}) => {
+  const [state, setState] = useState(() => ({
+    board: initBoard(width, height),
+    isStarted: false,
+    isGameOver: false,
+  }));
 
-  render() {
-    let rows = [];
-    let width = this.state.board.get('width');
-    let height = this.state.board.get('height');
-    for (let y = 0; y < height; y++) {
-      let cols = [];
-      for (let x = 0; x < width; x++) {
-        let props = this.state.board.getIn([x, y]).toJS();
-        let onClick = () => {
-          this.handleClick(x, y);
-        };
-        let onContextMenu = (event: React.MouseEvent) => {
-          event.preventDefault();
-          this.handleContextMenu(x, y);
-        };
-        cols.push(
-          <td key={x}>
-            <Cell {...props} onClick={onClick} onContextMenu={onContextMenu} />
-          </td>,
-        );
-      }
-      rows.push(<tr key={y}>{cols}</tr>);
-    }
-    let gameOverClass = this.state.gameOver ? 'game-over' : '';
-    return (
-      <div>
-        <button onClick={() => this.restart()}>restart</button>
-        <table className={'board ' + gameOverClass}>
-          <tbody>{rows}</tbody>
-        </table>
-      </div>
-    );
-  }
-
-  handleClick(x: number, y: number) {
-    if (this.state.gameOver) return;
-    if (this.state.board.getIn([x, y, 'flagged'])) return;
-
-    this.setState((prev, props) => {
-      let board = prev.board;
-      if (!prev.started) {
-        board = putMines(board, 20, x, y);
-      }
-      return {
-        board: open(board, x, y),
-        started: true,
+  let rows = [];
+  for (let y = 0; y < height; y++) {
+    let cols = [];
+    for (let x = 0; x < width; x++) {
+      let props = state.board.getIn([x, y]).toJS();
+      let onClick = () => {
+        setState(handleClick(x, y, state));
       };
-    });
+      let onContextMenu = (event: React.MouseEvent) => {
+        event.preventDefault();
+        setState(handleContextMenu(x, y, state));
+      };
+      cols.push(
+        <td key={x}>
+          <Cell {...props} onClick={onClick} onContextMenu={onContextMenu} />
+        </td>,
+      );
+    }
+    rows.push(<tr key={y}>{cols}</tr>);
+  }
+  let gameOverClass = state.isGameOver ? 'game-over' : '';
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setState({board: initBoard(width, height), isStarted: false, isGameOver: false});
+        }}
+      >
+        restart
+      </button>
+      <table className={'board ' + gameOverClass}>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>
+  );
+};
 
-    this.setState((prev, props) => {
-      if (prev.board.getIn([x, y, 'hasMine']) || openedAll(prev.board)) {
-        return {
-          gameOver: true,
-        };
-      }
-    });
+function handleClick(x: number, y: number, {board, isStarted, isGameOver}: GameState): GameState {
+  if (isGameOver) return;
+  if (board.getIn([x, y, 'flagged'])) return;
+
+  if (!isStarted) {
+    board = putMines(board, 20, x, y);
+    isStarted = true;
+  }
+  board = open(board, x, y);
+
+  if (board.getIn([x, y, 'hasMine']) || openedAll(board)) {
+    isGameOver = true;
   }
 
-  handleContextMenu(x: number, y: number) {
-    if (!this.state.started || this.state.gameOver) return;
+  return {board, isStarted, isGameOver};
+}
 
-    this.setState((prev, props) => ({
-      board: toggleFlagged(this.state.board, x, y),
-    }));
+function handleContextMenu(
+  x: number,
+  y: number,
+  {board, isStarted, isGameOver}: GameState,
+): GameState {
+  if (isStarted && !isGameOver) {
+    board = toggleFlagged(board, x, y);
   }
 
-  restart() {
-    this.setState((prev, props) => ({
-      gameOver: false,
-      started: false,
-      board: initBoard(prev.board.get('width'), prev.board.get('height')),
-    }));
-  }
+  return {board, isStarted, isGameOver};
 }
 
 interface CellProps {
