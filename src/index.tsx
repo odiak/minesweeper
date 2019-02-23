@@ -1,5 +1,5 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 
 import {List, Map, Range} from 'immutable';
 
@@ -53,13 +53,14 @@ function putMines(board, nMines, startX, startY) {
   let x = Math.floor(Math.random() * w);
   let y = Math.floor(Math.random() * h);
   let forbiddenPoints = List.of(List.of(startX, startY)).concat(
-    surrounding.map(([p, q]) => List.of(startX + p, startY + q)),
+    surrounding.map((l) => l.toArray()).map(([p, q]) => List.of(startX + p, startY + q)),
   );
 
   if (!forbiddenPoints.includes(List.of(x, y)) && !board.getIn([x, y, 'hasMine'])) {
     return letval(board.updateIn([x, y, 'hasMine'], () => true), (board_) =>
       putMines(
         surrounding
+          .map((l) => l.toArray())
           .map(([p, q]) => [x + p, y + q])
           .filter(_isInside(w, h))
           .filter(([x, y]) => !board_.getIn([x, y, 'hasMine']))
@@ -87,6 +88,7 @@ function open(board, x, y) {
   }
 
   return surrounding
+    .map((l) => l.toArray())
     .map(([a, b]) => [x + a, y + b])
     .filter(_isInside(w, h))
     .filter(([x_, y_]) => !board.getIn([x_, y_, 'hasMine']) && !board.getIn([x_, y_, 'opened']))
@@ -107,9 +109,9 @@ function toggleFlagged(board, x, y) {
   return board.updateIn([x, y, 'flagged'], (f) => !f);
 }
 
-class App extends React.Component {
-  constructor() {
-    super();
+class App extends React.Component<{}, any> {
+  constructor(props: {}) {
+    super(props);
 
     let width = 12;
     let height = 12;
