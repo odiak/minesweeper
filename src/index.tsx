@@ -130,11 +130,12 @@ class App extends React.Component<{}, any> {
       let cols = [];
       for (let x = 0; x < width; x++) {
         let props = this.state.board.getIn([x, y]).toJS();
-        let onClick = (event) => {
-          this.handleClick(event, x, y);
+        let onClick = () => {
+          this.handleClick(x, y);
         };
-        let onContextMenu = (event) => {
-          this.handleContextMenu(event, x, y);
+        let onContextMenu = (event: React.MouseEvent) => {
+          event.preventDefault();
+          this.handleContextMenu(x, y);
         };
         cols.push(
           <td key={x}>
@@ -147,7 +148,7 @@ class App extends React.Component<{}, any> {
     let gameOverClass = this.state.gameOver ? 'game-over' : '';
     return (
       <div>
-        <button onClick={(e) => this.restart(e)}>restart</button>
+        <button onClick={() => this.restart()}>restart</button>
         <table className={'board ' + gameOverClass}>
           <tbody>{rows}</tbody>
         </table>
@@ -155,7 +156,7 @@ class App extends React.Component<{}, any> {
     );
   }
 
-  handleClick(event, x, y) {
+  handleClick(x: number, y: number) {
     if (this.state.gameOver) return;
     if (this.state.board.getIn([x, y, 'flagged'])) return;
 
@@ -179,8 +180,7 @@ class App extends React.Component<{}, any> {
     });
   }
 
-  handleContextMenu(event, x, y) {
-    event.preventDefault();
+  handleContextMenu(x: number, y: number) {
     if (!this.state.started || this.state.gameOver) return;
 
     this.setState((prev, props) => ({
@@ -188,7 +188,7 @@ class App extends React.Component<{}, any> {
     }));
   }
 
-  restart(event) {
+  restart() {
     this.setState((prev, props) => ({
       gameOver: false,
       started: false,
@@ -197,14 +197,23 @@ class App extends React.Component<{}, any> {
   }
 }
 
-function Cell(props) {
+interface CellProps {
+  opened: boolean;
+  hasMine: boolean;
+  flagged: boolean;
+  surroundingMines: number;
+  onClick: (e: React.MouseEvent) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+}
+
+function Cell(props: CellProps) {
   let classNames = [];
   if (props.opened) classNames.push('opened');
   if (props.hasMine) classNames.push('has-mine');
   if (props.flagged) classNames.push('flagged');
   let text = '';
   if (props.opened && !props.hasMine && props.surroundingMines > 0) {
-    text = props.surroundingMines;
+    text = props.surroundingMines.toString();
   }
   return (
     <div
