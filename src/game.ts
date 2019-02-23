@@ -117,36 +117,60 @@ export function putMinesRandomly(
   return {...board, cells: newCells};
 }
 
-export function open(board: Board, x: number, y: number): Board {
+export function open(state: GameState, x: number, y: number): GameState {
+  if (state.isGameOver) {
+    return state;
+  }
+  const {board} = state;
   const {width, height} = board;
 
   const i = coordinateToIndex(x, y, width);
-  const openedBoard = assignCell(board, i, {isOpened: true});
-  const cell = openedBoard.cells[i];
-
-  if (cell.hasMine || cell.surroundingMines > 0) {
-    return openedBoard;
+  const cell = board.cells[i];
+  if (cell.isFlagged) {
+    return state;
   }
 
-  return surrounding
+  const openedBoard = assignCell(board, i, {isOpened: true});
+  const afterState = {...state, board: openedBoard};
+
+  if (cell.hasMine) {
+    return {...afterState, isGameOver: true};
+  }
+
+  if (cell.surroundingMines > 0) {
+    if (isOpenedAll(afterState.board)) {
+      return {...afterState, isGameOver: true};
+    }
+    return afterState;
+  }
+
+  const finalState = surrounding
     .map(([dx, dy]) => [x + dx, y + dy])
     .filter(([x, y]) => isInsideBoard(x, y, width, height))
     .filter(([x, y]) => {
       const {hasMine, isOpened} = openedBoard.cells[coordinateToIndex(x, y, width)];
       return !hasMine && !isOpened;
     })
-    .reduce((board, [x, y]) => open(board, x, y), openedBoard);
+    .reduce((state, [x, y]) => open(state, x, y), afterState);
+
+  console.log(isOpenedAll(finalState.board));
+  if (isOpenedAll(finalState.board)) {
+    return {...finalState, isGameOver: true};
+  }
+
+  return finalState;
 }
 
 export function isOpenedAll(board: Board): boolean {
   return board.cells.every(({hasMine, isOpened}) => hasMine || isOpened);
 }
 
-export function toggleFlagged(board: Board, x: number, y: number): Board {
+export function toggleFlagged(state: GameState, x: number, y: number): GameState {
+  const {board} = state;
   const i = coordinateToIndex(x, y, board.width);
   const cell = board.cells[i];
 
-  if (cell.isOpened) return board;
+  if (cell.isOpened) return state;
 
-  return {...board, cells: assignArray(board.cells, i, {...cell, isFlagged: !cell.isFlagged})};
+  return {...state, board: assignCell(board, i, {isFlagged: !cell.isFlagged})};
 }

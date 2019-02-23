@@ -2,15 +2,7 @@ import {useState} from 'react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import {range} from './util';
-import {
-  initBoard,
-  getCellByCoordinate,
-  GameState,
-  putMinesRandomly,
-  open,
-  isOpenedAll,
-  toggleFlagged,
-} from './game';
+import {initBoard, getCellByCoordinate, putMinesRandomly, open, toggleFlagged} from './game';
 import {Cell} from './Cell';
 
 const width = 12;
@@ -29,11 +21,17 @@ const App = ({}) => {
     for (const x of range(0, width)) {
       const cell = getCellByCoordinate(state.board, x, y);
       const onClick = () => {
-        setState(handleClick(x, y, state));
+        const beforeState =
+          state.isStarted || state.isGameOver
+            ? state
+            : {...state, isStarted: true, board: putMinesRandomly(state.board, 20, x, y)};
+        setState(open(beforeState, x, y));
       };
       const onContextMenu = (event: React.MouseEvent) => {
         event.preventDefault();
-        setState(handleContextMenu(x, y, state));
+        if (state.isStarted && !state.isGameOver) {
+          setState(toggleFlagged(state, x, y));
+        }
       };
       cols.push(
         <td key={x}>
@@ -59,36 +57,5 @@ const App = ({}) => {
     </div>
   );
 };
-
-function handleClick(x: number, y: number, state: GameState): GameState {
-  let {board, isStarted, isGameOver} = state;
-
-  if (isGameOver) return state;
-  if (getCellByCoordinate(board, x, y).isFlagged) return state;
-
-  if (!isStarted) {
-    board = putMinesRandomly(board, 20, x, y);
-    isStarted = true;
-  }
-  board = open(board, x, y);
-
-  if (getCellByCoordinate(board, x, y).hasMine || isOpenedAll(board)) {
-    isGameOver = true;
-  }
-
-  return {board, isStarted, isGameOver};
-}
-
-function handleContextMenu(
-  x: number,
-  y: number,
-  {board, isStarted, isGameOver}: GameState,
-): GameState {
-  if (isStarted && !isGameOver) {
-    board = toggleFlagged(board, x, y);
-  }
-
-  return {board, isStarted, isGameOver};
-}
 
 ReactDOM.render(<App />, document.getElementById('app'));
