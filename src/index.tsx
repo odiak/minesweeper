@@ -4,6 +4,21 @@ import * as ReactDOM from 'react-dom';
 import {range} from './util';
 import {initBoard, getCellByCoordinate, putMinesRandomly, open, toggleFlagged} from './game';
 import {Cell} from './Cell';
+import styled from '@emotion/styled';
+import {Global, css} from '@emotion/core';
+
+const globalStyles = css`
+  font-family: sans-serif;
+`;
+
+const StyledTable = styled.table`
+  border-collapse: collapse;
+
+  & td {
+    border: 2px solid #cccccc;
+    padding: 0;
+  }
+`;
 
 const width = 12;
 const height = 12;
@@ -35,13 +50,17 @@ const App = ({}) => {
       };
       cols.push(
         <td key={x}>
-          <Cell cell={cell} onClick={onClick} onContextMenu={onContextMenu} />
+          <Cell
+            cell={cell}
+            isGameOver={state.isGameOver}
+            onClick={onClick}
+            onContextMenu={onContextMenu}
+          />
         </td>,
       );
     }
     rows.push(<tr key={y}>{cols}</tr>);
   }
-  const gameOverClass = state.isGameOver ? 'game-over' : '';
   return (
     <div>
       <button
@@ -51,11 +70,18 @@ const App = ({}) => {
       >
         restart
       </button>
-      <table className={'board ' + gameOverClass}>
+      <StyledTable>
         <tbody>{rows}</tbody>
-      </table>
+      </StyledTable>
     </div>
   );
 };
 
-ReactDOM.render(<App />, document.getElementById('app'));
+ReactDOM.render(
+  <>
+    <Global styles={globalStyles} />
+    <App />
+  </>,
+
+  document.getElementById('app'),
+);
