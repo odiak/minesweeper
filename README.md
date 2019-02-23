@@ -2,6 +2,8 @@
 
 This is Minesweeper game written in JavaScript.
 
+Demo: <https://minesweeper.odiak.net>
+
 ## How to run
 
 Execute following on terminal:
