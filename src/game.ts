@@ -153,7 +153,6 @@ export function open(state: GameState, x: number, y: number): GameState {
     })
     .reduce((state, [x, y]) => open(state, x, y), afterState);
 
-  console.log(isOpenedAll(finalState.board));
   if (isOpenedAll(finalState.board)) {
     return {...finalState, isGameOver: true};
   }
