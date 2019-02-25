@@ -20,10 +20,24 @@ const StyledTable = styled.table`
   }
 `;
 
-const width = 12;
-const height = 12;
+interface Config {
+  width: number;
+  height: number;
+  rate: number;
+}
 
 const App = ({}) => {
+  const [configDraft, setConfigDraft] = useState(
+    (): Config => ({
+      width: 12,
+      height: 12,
+      rate: 0.1,
+    }),
+  );
+  const [config, setConfig] = useState(() => configDraft);
+
+  const {width, height, rate} = config;
+
   const [state, setState] = useState(() => ({
     board: initBoard(width, height),
     isStarted: false,
@@ -39,7 +53,11 @@ const App = ({}) => {
         const beforeState =
           state.isStarted || state.isGameOver
             ? state
-            : {...state, isStarted: true, board: putMinesRandomly(state.board, 20, x, y)};
+            : {
+                ...state,
+                isStarted: true,
+                board: putMinesRandomly(state.board, Math.floor(width * height * rate), x, y),
+              };
         setState(open(beforeState, x, y));
       };
       const onContextMenu = (event: React.MouseEvent) => {
@@ -63,16 +81,61 @@ const App = ({}) => {
   }
   return (
     <div>
+      <StyledTable>
+        <tbody>{rows}</tbody>
+      </StyledTable>
       <button
         onClick={() => {
-          setState({board: initBoard(width, height), isStarted: false, isGameOver: false});
+          setConfig(configDraft);
+          setState({
+            board: initBoard(configDraft.width, configDraft.height),
+            isStarted: false,
+            isGameOver: false,
+          });
         }}
       >
         restart
       </button>
-      <StyledTable>
-        <tbody>{rows}</tbody>
-      </StyledTable>
+      <div>
+        <label>
+          width:{' '}
+          <input
+            type="number"
+            value={configDraft.width}
+            onChange={(e) => setConfigDraft({...configDraft, width: e.target.valueAsNumber})}
+            min="10"
+            step="1"
+            style={{width: '60px'}}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          height:{' '}
+          <input
+            type="number"
+            value={configDraft.height}
+            onChange={(e) => setConfigDraft({...configDraft, height: e.target.valueAsNumber})}
+            min="10"
+            step="1"
+            style={{width: '60px'}}
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          rate:{' '}
+          <input
+            type="number"
+            value={configDraft.rate}
+            onChange={(e) => setConfigDraft({...configDraft, rate: e.target.valueAsNumber})}
+            min="0.01"
+            max="1"
+            step="0.01"
+            style={{width: '60px'}}
+          />
+        </label>
+      </div>
     </div>
   );
 };
