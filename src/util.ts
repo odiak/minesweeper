@@ -13,3 +13,5 @@ export function assignArray<Elem, Arr extends Array<Elem> | ReadonlyArray<Elem>>
   newArray[index] = value;
   return newArray as Arr;
 }
+
+export function noop() {}

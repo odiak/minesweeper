@@ -6,6 +6,8 @@ import {initBoard, getCellByCoordinate, putMinesRandomly, open, toggleFlagged} f
 import {Cell} from './Cell';
 import styled from '@emotion/styled';
 import {Global, css} from '@emotion/core';
+import {Config, persistConfig, unpersistConfig} from './Config';
+import {ConfigForm} from './ConfigForm';
 
 const globalStyles = css`
   font-family: sans-serif;
@@ -20,19 +22,14 @@ const StyledTable = styled.table`
   }
 `;
 
-interface Config {
-  width: number;
-  height: number;
-  rate: number;
-}
-
 const App = ({}) => {
   const [configDraft, setConfigDraft] = useState(
-    (): Config => ({
-      width: 12,
-      height: 12,
-      rate: 0.1,
-    }),
+    (): Config =>
+      unpersistConfig({
+        width: 12,
+        height: 12,
+        rate: 0.1,
+      }),
   );
   const [config, setConfig] = useState(() => configDraft);
 
@@ -96,46 +93,13 @@ const App = ({}) => {
       >
         restart
       </button>
-      <div>
-        <label>
-          width:{' '}
-          <input
-            type="number"
-            value={configDraft.width}
-            onChange={(e) => setConfigDraft({...configDraft, width: e.target.valueAsNumber})}
-            min="10"
-            step="1"
-            style={{width: '60px'}}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          height:{' '}
-          <input
-            type="number"
-            value={configDraft.height}
-            onChange={(e) => setConfigDraft({...configDraft, height: e.target.valueAsNumber})}
-            min="10"
-            step="1"
-            style={{width: '60px'}}
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          rate:{' '}
-          <input
-            type="number"
-            value={configDraft.rate}
-            onChange={(e) => setConfigDraft({...configDraft, rate: e.target.valueAsNumber})}
-            min="0.01"
-            max="1"
-            step="0.01"
-            style={{width: '60px'}}
-          />
-        </label>
-      </div>
+      <ConfigForm
+        config={configDraft}
+        onChangeConfig={(config) => {
+          setConfigDraft(config);
+          persistConfig(config);
+        }}
+      />
     </div>
   );
 };
