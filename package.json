@@ -4,8 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "webpack-dev-server",
-    "build": "webpack --mode production"
+    "start": "vite",
+    "build": "vite build"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.1",
