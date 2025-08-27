@@ -1,7 +1,7 @@
 import * as React from 'react';
-import {Cell} from './game';
+import type {Cell} from './game';
 import styled from '@emotion/styled';
-import {css} from '@emotion/core';
+import {css} from '@emotion/react';
 
 const StyledCell = styled.div<Cell & {isGameOver: boolean}>`
   width: 28px;

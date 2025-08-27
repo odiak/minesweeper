@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
-    "jsx": "react",
-    "lib": ["dom", "es2015", "es2016", "es2017", "es2018"],
+    "jsx": "react-jsx",
     "strict": true,
-    "target": "es6",
-    "module": "commonjs"
+    "lib": ["dom", "es2023"],
+    "target": "es2023",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "dist"
   }
 }

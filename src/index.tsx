@@ -1,13 +1,13 @@
-import {useState} from 'react';
+import { useState } from 'react';
 import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import {range} from './util';
-import {initBoard, getCellByCoordinate, putMinesRandomly, open, toggleFlagged} from './game';
-import {Cell} from './Cell';
+import { range } from './util';
+import { initBoard, getCellByCoordinate, putMinesRandomly, open, toggleFlagged } from './game';
+import { Cell } from './Cell';
 import styled from '@emotion/styled';
-import {Global, css} from '@emotion/core';
-import {Config, persistConfig, unpersistConfig} from './Config';
-import {ConfigForm} from './ConfigForm';
+import { Global, css } from '@emotion/react';
+import { Config, persistConfig, unpersistConfig } from './Config';
+import { ConfigForm } from './ConfigForm';
+import { createRoot } from 'react-dom/client';
 
 const globalStyles = css`
   font-family: sans-serif;
@@ -22,7 +22,7 @@ const StyledTable = styled.table`
   }
 `;
 
-const App = ({}) => {
+const App = ({ }) => {
   const [configDraft, setConfigDraft] = useState(
     (): Config =>
       unpersistConfig({
@@ -33,7 +33,7 @@ const App = ({}) => {
   );
   const [config, setConfig] = useState(() => configDraft);
 
-  const {width, height, rate} = config;
+  const { width, height, rate } = config;
 
   const [state, setState] = useState(() => ({
     board: initBoard(width, height),
@@ -51,10 +51,10 @@ const App = ({}) => {
           state.isStarted || state.isGameOver
             ? state
             : {
-                ...state,
-                isStarted: true,
-                board: putMinesRandomly(state.board, Math.floor(width * height * rate), x, y),
-              };
+              ...state,
+              isStarted: true,
+              board: putMinesRandomly(state.board, Math.floor(width * height * rate), x, y),
+            };
         setState(open(beforeState, x, y));
       };
       const onContextMenu = (event: React.MouseEvent) => {
@@ -104,11 +104,9 @@ const App = ({}) => {
   );
 };
 
-ReactDOM.render(
+createRoot(document.getElementById('app')!).render(
   <>
     <Global styles={globalStyles} />
     <App />
   </>,
-
-  document.getElementById('app'),
 );
